@@ -1,5 +1,7 @@
 # Antigravity CPU Fix
 
+**TL;DR:** Antigravity burns CPU because the agent panel never stops repainting. This fix slows it down to 1 refresh per second (still usable) and cuts background LSP load. Tested: CPU drops from 80%+ to ~20% idle. Backups auto-created; undo is easy.
+
 Antigravity feels slow because the agent panel constantly does small background tasks — it redraws and measures parts of the UI many times per second, which eats CPU even when you're not interacting with it. Also, every open project can launch a language server that uses CPU in the background, so multiple projects multiply the load. This patch reduces that constant background work so the app becomes responsive again; backups are automatic and rollback is a single copy.
 
 ## What this does (plain English)
@@ -18,13 +20,12 @@ Antigravity feels slow because the agent panel constantly does small background 
 ```bash
 git clone https://github.com/sgpascoe/antigravity-cpu-fix.git
 cd antigravity-cpu-fix
-chmod +x fix-antigravity-balanced.sh auto-repatch-and-launch.sh
+chmod +x install.sh rollback.sh
 
-# Apply (backups auto-created)
-sudo ./fix-antigravity-balanced.sh
+# One-click install + verify (shows before/after CPU)
+sudo ./install.sh
 
-# Launch with auto-repatch + devtools port 9223
-./auto-repatch-and-launch.sh
+# To undo: ./rollback.sh
 ```
 
 ## Rollback
@@ -47,11 +48,21 @@ ps aux | grep antigravity | grep -v grep | awk '{sum+=$3} END {print "Total CPU:
 ```
 
 ## Files you need
-- `fix-antigravity-balanced.sh` — apply once (auto backups)
-- `auto-repatch-and-launch.sh` — reapply after updates and launch with devtools port
+- `install.sh` — one-click install + verify (shows before/after CPU)
+- `rollback.sh` — undo the patch
 - `archive/` — everything else (old variants, monitor script, deep dive)
 
 ## Limits
 - Antigravity updates overwrite bundled JS; rerun the patch or use the launcher.
 - Multiple projects still spawn multiple LSPs; that load is per workspace.
 - Everything is local and backed up; undo is copying the backups back.
+
+## Verify files
+Check integrity before running:
+```bash
+# install.sh
+sha256sum install.sh  # 6db0c5c62b6e7900345e9f6b061acf32b960b9394f44c9ba93e5457e6aa4337e
+# rollback.sh
+sha256sum rollback.sh  # 114c7d00b9f08edffc23e488c81a450df2a2e54fa3d67d65eb2e36315ba59a7e
+```
+Scripts only modify Antigravity's local files and your settings; no network calls or data collection.
