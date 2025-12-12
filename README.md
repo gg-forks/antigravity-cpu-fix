@@ -1,6 +1,6 @@
 # Antigravity CPU Fix
 
-Antigravity feels slow because the agent panel never stops repainting: 60 FPS `requestAnimationFrame`, tight `setTimeout/queueMicrotask` loops, constant `getBoundingClientRect`, plus an LSP per workspace. This patch slows the agent to about one refresh per second (still usable) and trims LSP watcher/indexing overhead. Backups are automatic; rollback is a single copy.
+Antigravity feels slow because the agent panel constantly does small background tasks — it redraws and measures parts of the UI many times per second, which eats CPU even when you're not interacting with it. Also, every open project can launch a language server that uses CPU in the background, so multiple projects multiply the load. This patch reduces that constant background work so the app becomes responsive again; backups are automatic and rollback is a single copy.
 
 ## What this does (plain English)
 - Slows the agent UI so it stops hammering the CPU:
