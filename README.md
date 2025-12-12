@@ -1,19 +1,26 @@
 # Antigravity CPU Fix
 
-**Goal:** make Antigravity usable by stopping the agent UI from burning CPU, without freezing the UI. Backups are automatic; rollback is simple.
+Antigravity feels slow because the agent panel never stops repainting: 60 FPS `requestAnimationFrame`, tight `setTimeout/queueMicrotask` loops, constant `getBoundingClientRect`, plus an LSP per workspace. This patch slows the agent to about one refresh per second (still usable) and trims LSP watcher/indexing overhead. Backups are automatic; rollback is a single copy.
 
-## The short story (what/why)
-- **Problem:** The agent UI (jetski) continuously re-rendered and read layout (`requestAnimationFrame` at 60 FPS, tight `setTimeout/queueMicrotask` loops, lots of `getBoundingClientRect`). Result: renderer CPU spikes even when “idle”. Multi-workspace setups add heavy LSP/tsserver load per window.
-- **Fix:** Throttle the hottest UI loops to ~1s cadence (not 5s) and reduce LSP watcher/indexing overhead.
-- **What you get:** Agent stays responsive, renderer CPU drops; remaining load mostly comes from however many workspaces/LSPs you keep open.
+## What this does (plain English)
+- Slows the agent UI so it stops hammering the CPU:
+  - `requestAnimationFrame` → `setTimeout(..., 1000)` (~1 FPS)
+  - `setTimeout`: 0–200ms → 1200ms; 200–1000ms → 1500ms
+  - `setInterval` <1000ms → 1200–1500ms
+  - `queueMicrotask` → `setTimeout(..., 50ms)`
+- Lowers background LSP churn:
+  - Watch/search excludes for node_modules, .git, venv, dist/build, caches
+  - TS server uses fs events + dynamic polling; memory cap 2048
+  - Python: no indexing, no auto-import completions, workspace diagnostics
+- Launcher adds devtools port 9223 and auto-repatch after updates.
 
-## Quick start (do this)
+## Quick start
 ```bash
 git clone https://github.com/sgpascoe/antigravity-cpu-fix.git
 cd antigravity-cpu-fix
 chmod +x fix-antigravity-balanced.sh auto-repatch-and-launch.sh
 
-# Apply patch (backups auto-created)
+# Apply (backups auto-created)
 sudo ./fix-antigravity-balanced.sh
 
 # Launch with auto-repatch + devtools port 9223
@@ -21,7 +28,7 @@ sudo ./fix-antigravity-balanced.sh
 ```
 
 ## Rollback
-Backups live in `/tmp/antigravity_backups_YYYYMMDD_HHMMSS/`.
+Backups: `/tmp/antigravity_backups_YYYYMMDD_HHMMSS/`
 ```bash
 TS=<timestamp>
 sudo cp /tmp/antigravity_backups_$TS/main.js.backup /usr/share/antigravity/resources/app/out/jetskiAgent/main.js
@@ -30,29 +37,22 @@ cp /tmp/antigravity_backups_$TS/settings.json.backup ~/.config/Antigravity/User/
 ```
 Or reinstall Antigravity.
 
-## What the patch actually changes
-- Agent renderer (`jetskiAgent/main.js`):
-  - `requestAnimationFrame` → `setTimeout(..., 1000)` (1 FPS)
-  - `setTimeout`: 0–200ms → 1200ms; 200–1000ms → 1500ms
-  - `setInterval` <1000ms → 1200–1500ms
-  - `queueMicrotask` → `setTimeout(..., 50ms)`
-- Settings (`~/.config/Antigravity/User/settings.json`):
-  - Watch/search excludes for node_modules, .git, venv, dist/build, caches
-  - TS server: `useFsEvents`, dynamic polling, async dir watch; `maxTsServerMemory: 2048`
-  - Python: no indexing, no auto-import completions, workspace diagnostics
-- Launcher flags (used by `auto-repatch-and-launch.sh`):
-  - `--remote-debugging-port=9223 --remote-allow-origins=* --user-data-dir=/tmp/antigravity_devtools --disable-features=RendererCodeIntegrity`
-
 ## What to expect
-- Renderer CPU should idle low; total CPU will still reflect how many workspaces/LSPs you run.
-- Agent panel refreshes roughly once per second (by design for this “balanced” mode).
+- Agent panel updates ~1s by design.
+- Renderer CPU should drop; total CPU still scales with how many workspaces/LSPs you keep open.
 
 ## Monitor
 ```bash
 ps aux | grep antigravity | grep -v grep | awk '{sum+=$3} END {print "Total CPU: " sum"%"}'
 ```
 
-## Notes / limits
-- Antigravity updates overwrite bundled JS; rerun the patch or use `auto-repatch-and-launch.sh`.
-- Multi-project setups still spawn multiple LSPs; close unneeded windows to cut that load.
-- All changes are local and backed up; restoring is one copy away.
+## Files you need
+- `fix-antigravity-balanced.sh` — apply once (auto backups)
+- `auto-repatch-and-launch.sh` — reapply after updates and launch with devtools port
+- `fix-antigravity.sh` — original scripted flow (kept for completeness)
+- `archive/` — deep-dive and legacy stuff (can ignore)
+
+## Limits
+- Antigravity updates overwrite bundled JS; rerun the patch or use the launcher.
+- Multiple projects still spawn multiple LSPs; that load is per workspace.
+- Everything is local and backed up; undo is copying the backups back.
