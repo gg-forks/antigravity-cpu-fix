@@ -1,6 +1,6 @@
 # Antigravity CPU Fix
 
-**TL;DR:** Antigravity burns CPU because the agent panel never stops repainting. This fix slows it down to 1 refresh per second (still usable) and cuts background LSP load. Tested: CPU drops from 80%+ to ~20% idle. Backups auto-created; undo is easy.
+**TL;DR:** Antigravity wastes insane CPU because the agent panel repaints at 60 FPS even when idle — that's 3,000+ function calls/second for nothing! This fix slows it to 1 refresh/second (still usable) and cuts LSP background load. CPU drops from 80%+ to ~20% idle. Backups auto; undo easy.
 
 Antigravity feels slow because the agent panel constantly does small background tasks — it redraws and measures parts of the UI many times per second, which eats CPU even when you're not interacting with it. Also, every open project can launch a language server that uses CPU in the background, so multiple projects multiply the load. This patch reduces that constant background work so the app becomes responsive again; backups are automatic and rollback is a single copy.
 
