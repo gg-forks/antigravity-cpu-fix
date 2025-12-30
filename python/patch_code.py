@@ -22,11 +22,9 @@ except FileNotFoundError:
 
 original_hash = hashlib.md5(content).hexdigest()
 
-# --- STRATEGY: The "SlowMo" Helper ---
-
-# 1. Inject the Helper at top
-#    - Uses a Universal Fetch Interceptor (Works in Renderer & Node)
-#    - Reverted to (fn) for consistency
+# --- STRATEGY: Runtime Hijack ---
+# Injecting into globalThis ensures aliases like 'iur' or 'aur'
+# still use our throttled versions.
 polyfill = b"""{
   const _f = globalThis.fetch;
   if (_f) {
@@ -37,30 +35,21 @@ polyfill = b"""{
       return _f(u, o);
     };
   }
+  const _si = globalThis.setInterval;
+  globalThis.setInterval = (fn, ms, ...args) => {
+    if (typeof ms === 'number' && ms < 1000) ms = 1200;
+    return _si(fn, ms, ...args);
+  };
+  globalThis.queueMicrotask = (fn) => setTimeout(fn, 1200);
+  globalThis.requestAnimationFrame = (fn) => setTimeout(fn, 1200);
 }
 const __slowMo = (fn) => setTimeout(fn, 1200);
 """
 
-# Match the double quotes used in the polyfill variable above
-if b'u.includes("antigravity")' not in content:
+# Check unique string to prevent stacking
+if b"Blocked by Antigravity Patch" not in content:
     content = polyfill + b"\n" + content
-    print("✓ Injected isolated '__slowMo' and fetch interceptor")
-
-# 2. Replace 'queueMicrotask' -> '__slowMo'
-content = re.sub(rb"\bqueueMicrotask\b", b"__slowMo", content)
-
-# 3. Replace 'requestAnimationFrame' -> '__slowMo'
-content = re.sub(rb"\brequestAnimationFrame\b", b"__slowMo", content)
-
-
-# 4. Patch setInterval safely
-def boost_interval(match):
-    prefix = match.group(1)
-    func_arg = match.group(2)
-    return prefix + func_arg + b", 1200)"
-
-
-content = re.sub(rb"(setInterval\s*\()(.*?),(\s*\d{1,3}\s*\))", boost_interval, content)
+    print("✓ Injected Runtime Hijack Polyfill")
 
 # 5. Write changes
 new_hash = hashlib.md5(content).hexdigest()
@@ -69,10 +58,10 @@ if new_hash != original_hash:
     try:
         with open(file_path, "wb") as f:
             f.write(content)
-        print("✓ Patched jetskiAgent/main.js successfully")
+        print("✓ Patched successfully")
         print(f"  New Hash: {new_hash}")
     except Exception as e:
         print(f"❌ Error writing file: {e}")
         sys.exit(1)
 else:
-    print("⚠️  No changes made (File is already patched)")
+    print("⚠️  No changes made (Already patched or search string found)")

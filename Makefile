@@ -103,5 +103,7 @@ lint: ##H@@	Run `shellcheck` and `flake8`
 
 .PHONY: 3_update_integrity
 3_update_integrity: ##H@@	Update integrity manifest
+	@echo "Detected OS: $(OS)"
+	@echo "Target Dir:  $(TARGET_DIR)"
 	# This usually requires sudo
 	python3 python/update_integrity.py "$(TARGET_DIR)"

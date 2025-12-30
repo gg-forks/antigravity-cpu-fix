@@ -129,7 +129,6 @@ if ls -d /tmp/antigravity_backups_* >/dev/null 2>&1; then
 fi
 
 echo ""
-echo "🔧 Applying patch..."
 
 if [ "$CREATE_BACKUP" = true ]; then
 	mkdir -p "$BACKUP_DIR"
@@ -141,7 +140,18 @@ else
 	echo "⏩ Skipping backup (using existing)."
 fi
 
+# Create 2nd backup if not already
+if [ ! -f "$AG_DIR/resources/app/out/jetskiAgent/main.js.bak" ]; then
+	$SUDO_CMD cp "$AG_DIR/resources/app/out/jetskiAgent/main.js" "$AG_DIR/resources/app/out/jetskiAgent/main.js.bak"
+fi
+if [ ! -f "$AG_DIR/resources/app/product.json" ]; then
+	$SUDO_CMD cp "$AG_DIR/resources/app/product.json" "$AG_DIR/resources/app/product.json.bak"
+fi
+
 # --- CALL PYTHON SCRIPTS ---
+
+echo ""
+echo "🔧 Applying patch..."
 
 # 1. Patch Code
 $SUDO_CMD python3 "$SCRIPT_DIR/python/patch_code.py" "$AG_DIR"
