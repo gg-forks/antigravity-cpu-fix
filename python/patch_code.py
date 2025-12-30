@@ -1,30 +1,17 @@
 #!/usr/bin/env python3
 import hashlib
 import os
-import re
 import sys
 
-# 1. Validation
 if len(sys.argv) < 2:
     print("❌ Error: Missing Argument. Usage: patch_code.py <AG_DIR>")
     sys.exit(1)
 
 base_dir = sys.argv[1]
-file_path = os.path.join(base_dir, "resources/app/out/jetskiAgent/main.js")
-print(f"Targeting: {file_path}")
 
-try:
-    with open(file_path, "rb") as f:
-        content = f.read()
-except FileNotFoundError:
-    print(f"❌ Critical: Could not find main.js at {file_path}")
-    sys.exit(1)
+# The two critical entry points found by grep
+target_files = ["resources/app/out/jetskiAgent/main.js", "resources/app/out/main.js"]
 
-original_hash = hashlib.md5(content).hexdigest()
-
-# --- STRATEGY: Runtime Hijack ---
-# Injecting into globalThis ensures aliases like 'iur' or 'aur'
-# still use our throttled versions.
 polyfill = b"""{
   const _f = globalThis.fetch;
   if (_f) {
@@ -46,22 +33,27 @@ polyfill = b"""{
 const __slowMo = (fn) => setTimeout(fn, 1200);
 """
 
-# Check unique string to prevent stacking
-if b"Blocked by Antigravity Patch" not in content:
-    content = polyfill + b"\n" + content
-    print("✓ Injected Runtime Hijack Polyfill")
+for rel_path in target_files:
+    file_path = os.path.join(base_dir, rel_path)
+    if not os.path.exists(file_path):
+        print(f"⚠️  Skipping: {rel_path} (Not found)")
+        continue
 
-# 5. Write changes
-new_hash = hashlib.md5(content).hexdigest()
+    with open(file_path, "rb") as f:
+        content = f.read()
 
-if new_hash != original_hash:
-    try:
-        with open(file_path, "wb") as f:
-            f.write(content)
-        print("✓ Patched successfully")
-        print(f"  New Hash: {new_hash}")
-    except Exception as e:
-        print(f"❌ Error writing file: {e}")
-        sys.exit(1)
-else:
-    print("⚠️  No changes made (Already patched or search string found)")
+    original_hash = hashlib.md5(content).hexdigest()
+
+    if b"Blocked by Antigravity Patch" not in content:
+        content = polyfill + b"\n" + content
+        new_hash = hashlib.md5(content).hexdigest()
+
+        try:
+            with open(file_path, "wb") as f:
+                f.write(content)
+            print(f"✅ Patched: {rel_path}")
+            print(f"  New Hash: {new_hash}")
+        except Exception as e:
+            print(f"❌ Error writing {rel_path}: {e}")
+    else:
+        print(f"ℹ️  Already Patched: {rel_path}")
