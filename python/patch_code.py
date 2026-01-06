@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import hashlib
 import os
+import shutil
 import sys
 
 if len(sys.argv) < 2:
@@ -28,10 +29,7 @@ polyfill = b"""{
     if (typeof ms === 'number' && ms < 1000) ms = 1200;
     return _si(fn, ms, ...args);
   };
-  globalThis.queueMicrotask = (fn) => setTimeout(fn, 1200);
-  globalThis.requestAnimationFrame = (fn) => setTimeout(fn, 1200);
 }
-const __slowMo = (fn) => setTimeout(fn, 1200);
 """
 
 for rel_path in target_files:
@@ -39,6 +37,16 @@ for rel_path in target_files:
     if not os.path.exists(file_path):
         print(f"⚠️  Skipping: {rel_path} (Not found)")
         continue
+
+    # Backup Logic
+    backup_path = file_path + ".bak"
+    if not os.path.exists(backup_path):
+        try:
+            shutil.copy2(file_path, backup_path)
+            print(f"📦 Created backup: {rel_path}.bak")
+        except Exception as e:
+            print(f"❌ Error creating backup for {rel_path}: {e}")
+            # Decide if we want to proceed or stop. Proceeding for now but warning.
 
     with open(file_path, "rb") as f:
         content = f.read()

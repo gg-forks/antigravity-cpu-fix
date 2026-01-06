@@ -1,0 +1,53 @@
+{
+  "telemetry.telemetryLevel": "off",
+  "telemetry.enableTelemetry": false,
+  "telemetry.enableCrashReporter": false,
+  "redhat.telemetry.enabled": false,
+  "google.telemetry.enabled": false,
+  "cloudcode.telemetry.enabled": false,
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.next/**": true,
+    "**/target/**": true,
+    "**/.cache/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/venv": true,
+    "**/.venv": true,
+    "**/__pycache__": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.next": true,
+    "**/target": true,
+    "**/.git": true,
+    "**/.cache": true
+  },
+  "search.followSymlinks": false,
+  "search.useIgnoreFiles": true,
+  "typescript.tsserver.maxTsServerMemory": 2048,
+  "typescript.tsserver.watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEvents",
+    "fallbackPolling": "dynamicPriority",
+    "synchronousWatchDirectory": false
+  },
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": false,
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.indexing": false,
+  "editor.minimap.enabled": false,
+  "editor.smoothScrolling": false,
+  "workbench.list.smoothScrolling": false,
+  "window.autoDetectColorScheme": false,
+  "workbench.reduceMotion": "on",
+  "git.autorefresh": false,
+  "extensions.autoUpdate": false,
+  "debug.toolBarLocation": "docked"
+}

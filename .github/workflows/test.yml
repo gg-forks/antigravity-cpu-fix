@@ -1,0 +1,112 @@
+---
+name: CI Test
+
+on:
+  push:
+  schedule:
+    # Run once a week on Sunday at 00:00 UTC
+    - cron: "0 0 * * 0"
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install jq
+
+      - name: Set up test environment
+        run: |
+          # Use the archive folder as the source for mock installation
+          # Copy the archived source to test location
+          cp -r archive/ag-1.104.0/src/. /tmp/test_antigravity
+
+          # Copy the archived config to test config location
+          mkdir -p /tmp/test_config
+          cp -r archive/ag-1.104.0/config/. /tmp/test_config
+
+          # Make everything writable for testing
+          chmod -R 777 /tmp/test_antigravity
+          chmod -R 777 /tmp/test_config
+
+      - name: Run make doctor
+        env:
+          AG_SRC: /tmp/test_antigravity
+          AG_CONF: /tmp/test_config
+        run: make doctor
+
+      - name: Run make 1_optimize_settings
+        env:
+          AG_CONF: /tmp/test_config
+        run: make 1_optimize_settings
+
+      - name: Run make 2_patch_code
+        env:
+          AG_SRC: /tmp/test_antigravity
+        run: make 2_patch_code
+
+      - name: Run make 3_update_integrity
+        env:
+          AG_SRC: /tmp/test_antigravity
+        run: make 3_update_integrity
+
+      - name: Test Python scripts directly
+        run: |
+          echo "=== Testing patch_code.py ==="
+          python3 python/patch_code.py /tmp/test_antigravity
+          echo "=== Testing optimize_settings.py ==="
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            python3 python/optimize_settings.py ~/.config
+          else
+            python3 python/optimize_settings.py "$HOME/Library/Application Support"
+          fi
+          echo "=== Testing update_integrity.py ==="
+          python3 python/update_integrity.py /tmp/test_antigravity
+
+      - name: Run make rollback
+        env:
+          AG_SRC: /tmp/test_antigravity
+          AG_VERSION: 1.104.0
+        run: make rollback
+
+      - name: Verify backups were created
+        run: |
+          echo "Checking for backup files..."
+          ls -la /tmp/test_antigravity/resources/app/out/jetskiAgent/ || true
+          ls -la /tmp/test_antigravity/resources/app/ || true
+
+          # Check if .bak files exist
+          if [[ -f /tmp/test_antigravity/resources/app/out/jetskiAgent/main.js.bak ]]; then
+            echo "✓ main.js backup created"
+          else
+            echo "✗ main.js backup not found"
+            exit 1
+          fi
+
+          if [[ -f /tmp/test_antigravity/resources/app/product.json.bak ]]; then
+            echo "✓ product.json backup created"
+          else
+            echo "✗ product.json backup not found"
+            exit 1
+          fi
+
+      - name: Check settings were updated
+        run: |
+          echo "Checking settings.json..."
+          cat /tmp/test_config/Antigravity/User/settings.json | python3 -m json.tool | head -20

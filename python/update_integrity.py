@@ -3,6 +3,7 @@ import base64
 import hashlib
 import json
 import os
+import shutil
 import sys
 
 # 1. Setup
@@ -15,9 +16,14 @@ product_json_path = os.path.join(base_dir, "resources/app/product.json")
 file_path = os.path.join(base_dir, "resources/app/out/jetskiAgent/main.js")
 target_suffix = "jetskiAgent/main.js"
 
-if not os.path.exists(product_json_path):
-    print("⚠️  product.json not found. Skipping integrity fix.")
-    sys.exit(0)
+# Backup Logic
+backup_path = product_json_path + ".bak"
+if not os.path.exists(backup_path):
+    try:
+        shutil.copy2(product_json_path, backup_path)
+        print("📦 Created backup: product.json.bak")
+    except Exception as e:
+        print(f"❌ Error creating backup for product.json: {e}")
 
 # Read existing data
 with open(product_json_path, "r") as f:

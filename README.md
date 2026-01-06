@@ -9,7 +9,7 @@ Antigravity feels slow because the agent panel constantly does small background 
   - `requestAnimationFrame` → `setTimeout(..., 1000)` (~1 FPS)
   - `setTimeout`: 0–200ms → 1200ms; 200–1000ms → 1500ms
   - `setInterval` <1000ms → 1200–1500ms
-  - `queueMicrotask` → `setTimeout(..., 50ms)`
+  - `queueMicrotask` → `setTimeout(..., 50ms)` (Removed aggressive throttling in recent patch)
 - Lowers background LSP churn:
   - Watch/search excludes for node_modules, .git, venv, dist/build, caches
   - TS server uses fs events + dynamic polling; memory cap 2048
@@ -17,52 +17,49 @@ Antigravity feels slow because the agent panel constantly does small background 
 - Launcher adds devtools port 9223 and auto-repatch after updates.
 
 ## Quick start
+
+### Install
+1. **Analyze Environment** (Dry Run):
+   ```bash
+   make doctor
+   ```
+2. **Optimize Settings** (Safe, User-space only):
+   ```bash
+   make 1_optimize_settings
+   ```
+3. **Patch Code** (Req. Sudo):
+   ```bash
+   # This will create .bak backups of modified files
+   sudo make 2_patch_code
+   ```
+4. **Update Integrity** (Req. Sudo):
+   ```bash
+   sudo make 3_update_integrity
+   ```
+
+### Rollback
+If you need to restore original files:
 ```bash
-git clone https://github.com/sgpascoe/antigravity-cpu-fix.git
-cd antigravity-cpu-fix
-chmod +x install.sh rollback.sh
-
-# One-click install + verify (shows before/after CPU)
-sudo ./install.sh
-
-# To undo: ./rollback.sh
+sudo make rollback
 ```
-
-## Rollback
-Backups: `/tmp/antigravity_backups_YYYYMMDD_HHMMSS/`
-```bash
-TS=<timestamp>
-sudo cp /tmp/antigravity_backups_$TS/main.js.backup /usr/share/antigravity/resources/app/out/jetskiAgent/main.js
-sudo cp /tmp/antigravity_backups_$TS/workbench.desktop.main.js.backup /usr/share/antigravity/resources/app/out/vs/workbench/workbench.desktop.main.js
-cp /tmp/antigravity_backups_$TS/settings.json.backup ~/.config/Antigravity/User/settings.json
-```
-Or reinstall Antigravity.
 
 ## What to expect
 - Agent panel updates ~1s by design.
 - Renderer CPU should drop; total CPU still scales with how many workspaces/LSPs you keep open.
 
-## Monitor
-```bash
-ps aux | grep antigravity | grep -v grep | awk '{sum+=$3} END {print "Total CPU: " sum"%"}'
-```
+## Backup Strategy
+- **In-place backups**: The patch scripts create `.bak` files next to the original files (e.g., `main.js.bak`).
+- **Archive folder**: Contains the original version 1.104.0 source files for reference and rollback.
+- **Rollback**: Use `make rollback` for instructions, or manually copy from `archive/ag-1.104.0/`.
 
 ## Files you need
-- `install.sh` — one-click install + verify (shows before/after CPU)
-- `rollback.sh` — undo the patch
-- `archive/` — everything else (old variants, monitor script, deep dive)
+- `make` — Use the Makefile targets to run tools.
+- `archive/` — Contains original version 1.104.0 files for reference and rollback.
 
 ## Limits
-- Antigravity updates overwrite bundled JS; rerun the patch or use the launcher.
+- Antigravity updates overwrite bundled JS; rerun the patch.
 - Multiple projects still spawn multiple LSPs; that load is per workspace.
 - Everything is local and backed up; undo is copying the backups back.
 
 ## Verify files
-Check integrity before running:
-```bash
-# install.sh
-sha256sum install.sh  # 6db0c5c62b6e7900345e9f6b061acf32b960b9394f44c9ba93e5457e6aa4337e
-# rollback.sh
-sha256sum rollback.sh  # 114c7d00b9f08edffc23e488c81a450df2a2e54fa3d67d65eb2e36315ba59a7e
-```
 Scripts only modify Antigravity's local files and your settings; no network calls or data collection.
