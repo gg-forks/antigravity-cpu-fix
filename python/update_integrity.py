@@ -16,6 +16,41 @@ product_json_path = os.path.join(base_dir, "resources/app/product.json")
 file_path = os.path.join(base_dir, "resources/app/out/jetskiAgent/main.js")
 target_suffix = "jetskiAgent/main.js"
 
+# Path to archive for reference
+archive_base = "archive/ag-1.104.0/src"
+archive_main_js = os.path.join(archive_base, "resources/app/out/jetskiAgent/main.js")
+archive_product_json = os.path.join(archive_base, "resources/app/product.json")
+
+
+def get_file_hash(file_path, algo="sha256", encoding="hex"):
+    """Calculate hash of a file with specified algorithm and encoding."""
+    h = hashlib.new(algo)
+    with open(file_path, "rb") as f:
+        while chunk := f.read(8192):
+            h.update(chunk)
+    if encoding == "base64":
+        return base64.b64encode(h.digest()).decode("utf-8")
+    elif encoding == "base64_unpadded":
+        return base64.b64encode(h.digest()).decode("utf-8").rstrip("=")
+    else:  # hex
+        return h.hexdigest()
+
+
+def detect_hash_format(existing_hash):
+    """Detect the hash format from an existing checksum."""
+    if len(existing_hash) == 32:
+        return "md5", "hex"
+    elif len(existing_hash) == 64:
+        return "sha256", "hex"
+    elif len(existing_hash) == 44 and existing_hash.endswith("="):
+        return "sha256", "base64"
+    elif len(existing_hash) == 43:
+        return "sha256", "base64_unpadded"
+    else:
+        # Default to sha256 hex
+        return "sha256", "hex"
+
+
 # Backup Logic
 backup_path = product_json_path + ".bak"
 if not os.path.exists(backup_path):
@@ -48,36 +83,29 @@ if target_key:
     print(f"ℹ️  Found checksum key: {target_key}")
     old_hash = checksums[target_key]
 
-    # --- DETECTION LOGIC ---
-    algo = "sha256"
-    encoding = "hex"
+    # Detect hash format
+    algo, encoding = detect_hash_format(old_hash)
+    print(f"  Detected format: {algo}, {encoding}")
 
-    if len(old_hash) == 32:
-        algo, encoding = "md5", "hex"
-    elif len(old_hash) == 44 and old_hash.endswith("="):
-        algo, encoding = "sha256", "base64"
-    elif len(old_hash) == 43:
-        algo, encoding = "sha256", "base64_unpadded"
-
-    # --- GENERATION LOGIC ---
+    # Calculate new hash
     try:
-        with open(file_path, "rb") as f:
-            content = f.read()
+        new_hash = get_file_hash(file_path, algo, encoding)
     except FileNotFoundError:
         print(f"❌ Error: Could not read target file: {file_path}")
         sys.exit(1)
 
-    h_obj = hashlib.new(algo)
-    h_obj.update(content)
+    # Compare with archive hash for verification
+    if os.path.exists(archive_main_js):
+        archive_hash = get_file_hash(archive_main_js, algo, encoding)
+        print(f"  Archive hash: {archive_hash}")
 
-    if encoding == "base64":
-        new_hash = base64.b64encode(h_obj.digest()).decode("utf-8")
-    elif encoding == "base64_unpadded":
-        new_hash = base64.b64encode(h_obj.digest()).decode("utf-8").rstrip("=")
-    else:
-        new_hash = h_obj.hexdigest()
+        # If patched file doesn't match archive, that's expected
+        if new_hash != archive_hash:
+            print("  ✓ File is patched (differs from archive)")
+        else:
+            print("  ⚠️  File matches archive (may not be patched)")
 
-    # --- COMPARE ---
+    # Compare with old hash
     if new_hash != old_hash:
         checksums[target_key] = new_hash
         data["checksums"] = checksums

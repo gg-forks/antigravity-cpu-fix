@@ -152,6 +152,7 @@ vars: ##H@@	Display all Makefile variables (simple)
 format: ##H@@	Run black & isort
 	isort python/
 	black python/
+	ruff check --fix --silent --exit-zero python/
 	-prettier --write .github/
 	@echo OK.
 
