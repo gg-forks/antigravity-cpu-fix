@@ -6,14 +6,30 @@ import os
 import shutil
 import sys
 
-if len(sys.argv) < 2:
-    print("❌ Error: Missing Argument. Usage: patch_code.py <AG_DIR>")
-    sys.exit(1)
+    if len(sys.argv) < 2:
+        print("❌ Error: Missing Argument. Usage: patch_code.py <AG_SRC>")
+        sys.exit(1)
 
-base_dir = sys.argv[1]
+    ag_dir = sys.argv[1]
+
+# Detect layout
+possible_paths = [
+    "resources/app/out/jetskiAgent/main.js",
+    "out/jetskiAgent/main.js"
+]
+
+target_rel_path = None
+for p in possible_paths:
+    if os.path.exists(os.path.join(ag_dir, p)):
+        target_rel_path = p
+        break
+
+if not target_rel_path:
+    # Default to standard if neither found (will fail later but keeps logic simple)
+    target_rel_path = "resources/app/out/jetskiAgent/main.js"
 
 # The primary entry point - jetskiAgent/main.js
-target_files = ["resources/app/out/jetskiAgent/main.js"]
+target_files = [target_rel_path]
 
 # Path to archive for verification (relative to this script)
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -139,8 +155,20 @@ def verify_checksum(target_path, archive_path, product_json_path):
 
 
 for rel_path in target_files:
-    file_path = os.path.join(base_dir, rel_path)
-    archive_file_path = os.path.join(archive_base, rel_path)
+    file_path = os.path.join(ag_dir, rel_path)
+    # For archive, we always expect the standard structure or need to map it.
+    # Since archive is fixed structure (resources/app...), we need to be careful.
+    # If target is "out/...", archive is still "resources/app/out/...".
+    
+    # Map relative path to archive path
+    if rel_path.startswith("resources/app/"):
+        archive_rel_path = rel_path
+    elif rel_path.startswith("out/"):
+        archive_rel_path = os.path.join("resources/app", rel_path)
+    else:
+        archive_rel_path = rel_path
+
+    archive_file_path = os.path.join(archive_base, archive_rel_path)
 
     if not os.path.exists(file_path):
         print(f"⚠️  Skipping: {rel_path} (Not found)")

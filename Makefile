@@ -42,11 +42,12 @@ endif
 # Checks/defaults
 _AG_CHECK_AG_SRC_DIR := $(shell [ -d "$(AG_SRC)" ] && echo 1)
 
-AG_FILE_01_MAIN_JS = $(AG_SRC)/resources/app/out/jetskiAgent/main.js
+# Dynamic path detection for flat vs nested structure
+AG_FILE_01_MAIN_JS := $(shell if [ -f "$(AG_SRC)/resources/app/out/jetskiAgent/main.js" ]; then echo "$(AG_SRC)/resources/app/out/jetskiAgent/main.js"; else echo "$(AG_SRC)/out/jetskiAgent/main.js"; fi)
 _AG_CHECK_MAIN_JS := $(shell [ -f "$(AG_FILE_01_MAIN_JS)" ] && echo 1)
 _AG_CHECK_MAIN_WRITABLE := $(shell [ -w "$(AG_FILE_01_MAIN_JS)" ] && echo 1)
 
-AG_FILE_02_PRODUCT_JSON = $(AG_SRC)/resources/app/product.json
+AG_FILE_02_PRODUCT_JSON := $(shell if [ -f "$(AG_SRC)/resources/app/product.json" ]; then echo "$(AG_SRC)/resources/app/product.json"; else echo "$(AG_SRC)/product.json"; fi)
 _AG_CHECK_PRODUCT_JSON := $(shell [ -f "$(AG_FILE_02_PRODUCT_JSON)" ] && echo 1)
 _AG_CHECK_PRODUCT_WRITABLE := $(shell [ -w "$(AG_FILE_02_PRODUCT_JSON)" ] && echo 1)
 # Extract version from product.json, trimming whitespace
@@ -64,7 +65,7 @@ doctor: ##H@@	Check paths and health (Dry Run)
 	@echo "Detected OS:         $(AG_OS)"
 	@echo ""
 	@echo "AG_SRC (Source):     $(AG_SRC)"
-	@echo "  (Override with: AG_DIR=/your/path make doctor)"
+	@echo "  (Override with: AG_SRC=/your/path make doctor)"
 	@echo ""
 	@echo "Main Entry Point:    $(AG_FILE_01_MAIN_JS)"
 	@echo "Product Metadata:    $(AG_FILE_02_PRODUCT_JSON)"
@@ -130,6 +131,9 @@ endif
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Help targets
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.PHONY: help
+help: _help
+
 .PHONY: _help
 _help:
 	@printf "\nUsage: make <command>, valid commands:\n\n"
