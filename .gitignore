@@ -10,3 +10,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# python
+__pycache__
+
