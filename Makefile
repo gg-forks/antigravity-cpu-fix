@@ -132,28 +132,6 @@ endif
 # --- END doctor TARGET ---
 
 
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Help targets
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.PHONY: help
-help: _help
-
-.PHONY: _help
-_help:
-	@printf "\nUsage: make <command>, valid commands:\n\n"
-	@grep -h "##H@@" $(MAKEFILE_LIST) | grep -v IGNORE_ME | sed -e 's/##H@@//' | column -t -s $$'\t'
-
-# Display variables & values
-.PHONY: vars
-vars: ##H@@	Display all Makefile variables (simple)
-	@echo "=== Makefile Variables (file/command/line origin) ==="
-	@$(foreach V,$(sort $(.VARIABLES)), \
-		$(if $(filter file command line,$(origin $(V))), \
-			printf "%-30s = " "$(V)" ; \
-			printf "%s\n" "$($(V))" ; \
-		) \
-	)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Development commands
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -162,6 +140,8 @@ format: ##H@@	Run black & isort
 	isort python/
 	black python/
 	ruff check --fix --silent --exit-zero python/
+	-pre-commit run --all-files
+	-shfmt -w $(shell git ls-files '*.sh')
 	-prettier --write .github/
 	@echo OK.
 
@@ -205,3 +185,27 @@ rollback: ##H@@	Restore from backups
 	@echo "You can manually restore by copying main.js and product.json from \"archive/ag-$(AG_VERSION)\""
 	@echo "  and removing any of the sections added to the settings file manually."
 	@echo "MAKE SURE THE VERSION MATCHES BEFORE DOING SO."
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Help targets
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.PHONY: help
+help: _help
+
+.PHONY: _help
+_help:
+	@printf "\nUsage: make <command>, valid commands:\n\n"
+	@grep -h "##H@@" $(MAKEFILE_LIST) | grep -v IGNORE_ME | sed -e 's/##H@@//' | column -t -s $$'\t'
+
+# Display variables & values
+.PHONY: vars
+vars: ##H@@	Display all Makefile variables (simple)
+	@echo "=== Makefile Variables (file/command/line origin) ==="
+	@$(foreach V,$(sort $(.VARIABLES)), \
+		$(if $(filter file command line,$(origin $(V))), \
+			printf "%-30s = " "$(V)" ; \
+			printf "%s\n" "$($(V))" ; \
+		) \
+	)
