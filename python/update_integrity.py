@@ -7,16 +7,16 @@ import shutil
 import sys
 
 # 1. Setup
-    if len(sys.argv) < 2:
-        print("❌ Error: Missing Argument. Usage: update_integrity.py <AG_SRC>")
-        sys.exit(1)
+if len(sys.argv) < 2:
+    print("❌ Error: Missing Argument. Usage: update_integrity.py <AG_SRC>")
+    sys.exit(1)
 
 base_dir = sys.argv[1]
 
 # Detect layout for product.json
 possible_product_paths = [
     os.path.join(base_dir, "resources/app/product.json"),
-    os.path.join(base_dir, "product.json")
+    os.path.join(base_dir, "product.json"),
 ]
 product_json_path = None
 for p in possible_product_paths:
@@ -24,12 +24,12 @@ for p in possible_product_paths:
         product_json_path = p
         break
 if not product_json_path:
-    product_json_path = possible_product_paths[0] # Default
+    product_json_path = possible_product_paths[0]  # Default
 
 # Detect layout for main.js
 possible_main_paths = [
     os.path.join(base_dir, "resources/app/out/jetskiAgent/main.js"),
-    os.path.join(base_dir, "out/jetskiAgent/main.js")
+    os.path.join(base_dir, "out/jetskiAgent/main.js"),
 ]
 file_path = None
 for p in possible_main_paths:
@@ -37,12 +37,12 @@ for p in possible_main_paths:
         file_path = p
         break
 if not file_path:
-    file_path = possible_main_paths[0] # Default
+    file_path = possible_main_paths[0]  # Default
 
 target_suffix = "jetskiAgent/main.js"
 
 # Path to archive for reference
-archive_base = "archive/ag-1.104.0/src"
+archive_base = "archive/ag-1.104.1/src"
 archive_main_js = os.path.join(archive_base, "resources/app/out/jetskiAgent/main.js")
 archive_product_json = os.path.join(archive_base, "resources/app/product.json")
 

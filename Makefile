@@ -35,6 +35,9 @@ ifndef AG_SRC
         ifneq (,$(wildcard /usr/share/antigravity/resources/.))
             AG_SRC := /usr/share/antigravity
         endif
+        ifneq (,$(wildcard /usr/lib/antigravity/product.json))
+            AG_SRC := /usr/lib/antigravity
+        endif
     endif
 endif
 
@@ -96,10 +99,10 @@ endif
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ifeq ($(_AG_CHECK_PRODUCT_JSON),1)
 	@echo "[OK] product.json found (Version: $(AG_VERSION))"
-	@if [ "$(AG_VERSION)" = "1.104.0" ]; then \
-		echo "   [OK] Version 1.104.0 exact match"; \
+	@if [ "$(AG_VERSION)" = "1.104.1" ]; then \
+		echo "   [OK] Version 1.104.1 exact match"; \
 	else \
-		echo "   [WARN] Unexpected version: \"$(AG_VERSION)\" (Expected: \"1.104.0\")"; \
+		echo "   [WARN] Unexpected version: \"$(AG_VERSION)\" (Expected: \"1.104.1\")"; \
 	fi
 ifeq ($(_AG_CHECK_PRODUCT_WRITABLE),1)
 	@echo "   [INFO] product.json is writable (No sudo needed)"
