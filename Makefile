@@ -11,7 +11,7 @@ _AG_SRC_MAC := /Applications/Antigravity.app/Contents
 _AG_CONF_LINUX := $(HOME)/.config
 _AG_CONF_MAC := $(HOME)/Library/Application Support
 
-AG_VERSION_EXPECTED := "1.107.0"
+AG_VERSION_EXPECTED := $(shell cat version.txt | tr -d ' \n')
 
 
 # Logic - allow AG_SRC and AG_CONF override from environment
@@ -175,6 +175,10 @@ lint: ##H@@	Run ruff
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main "Patch" targets
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.PHONY: fetch_baseline
+fetch_baseline: ##H@@	Fetch pristine files from official repo
+	./fetch_baseline.sh "$(AG_VERSION_EXPECTED)"
+
 .PHONY: 1_optimize_settings
 1_optimize_settings: ##H@@	Run settings optimization (Auto-detected OS path)
 	@echo "Detected OS: $(OS)"

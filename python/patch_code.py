@@ -12,7 +12,8 @@ if len(sys.argv) < 2:
 
 ag_dir = sys.argv[1]
 
-VERSION = "1.107.0"
+with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "version.txt")) as f:
+    VERSION = f.read().strip()
 
 # Detect layout
 possible_paths = ["resources/app/out/jetskiAgent/main.js", "out/jetskiAgent/main.js"]

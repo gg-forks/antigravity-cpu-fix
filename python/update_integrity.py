@@ -13,7 +13,8 @@ if len(sys.argv) < 2:
 
 base_dir = sys.argv[1]
 
-VERSION = "1.107.0"
+with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "version.txt")) as f:
+    VERSION = f.read().strip()
 
 # Detect layout for product.json
 possible_product_paths = [
