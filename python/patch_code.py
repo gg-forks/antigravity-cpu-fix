@@ -174,6 +174,13 @@ for rel_path in target_files:
         print(f"⚠️  Skipping: {rel_path} (Not found)")
         continue
 
+    with open(file_path, "rb") as f:
+        content = f.read()
+
+    if b"Antigravity CPU Fix" in content:
+        print(f"ℹ️  Already Patched: {rel_path}")
+        continue
+
     # Verify checksum before patching
     print(f"🔍 Verifying checksum for {rel_path}...")
     checksum_ok = verify_checksum(file_path, archive_file_path, archive_product_json)
@@ -195,21 +202,15 @@ for rel_path in target_files:
             print(f"❌ Error creating backup for {rel_path}: {e}")
             # Decide if we want to proceed or stop. Proceeding for now but warning.
 
-    with open(file_path, "rb") as f:
-        content = f.read()
-
     original_hash = hashlib.md5(content).hexdigest()
 
-    if b"Antigravity CPU Fix" not in content:
-        content = polyfill + b"\n" + content
-        new_hash = hashlib.md5(content).hexdigest()
+    content = polyfill + b"\n" + content
+    new_hash = hashlib.md5(content).hexdigest()
 
-        try:
-            with open(file_path, "wb") as f:
-                f.write(content)
-            print(f"✅ Patched: {rel_path}")
-            print(f"  New Hash: {new_hash}")
-        except Exception as e:
-            print(f"❌ Error writing {rel_path}: {e}")
-    else:
-        print(f"ℹ️  Already Patched: {rel_path}")
+    try:
+        with open(file_path, "wb") as f:
+            f.write(content)
+        print(f"✅ Patched: {rel_path}")
+        print(f"  New Hash: {new_hash}")
+    except Exception as e:
+        print(f"❌ Error writing {rel_path}: {e}")
