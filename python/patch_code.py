@@ -12,6 +12,8 @@ if len(sys.argv) < 2:
 
 ag_dir = sys.argv[1]
 
+VERSION = "1.107.0"
+
 # Detect layout
 possible_paths = ["resources/app/out/jetskiAgent/main.js", "out/jetskiAgent/main.js"]
 
@@ -30,7 +32,7 @@ target_files = [target_rel_path]
 
 # Path to archive for verification (relative to this script)
 script_dir = os.path.dirname(os.path.abspath(__file__))
-archive_base = os.path.join(script_dir, "../archive/ag-1.104.1/src")
+archive_base = os.path.join(script_dir, f"../archive/ag-{VERSION}/src")
 archive_base = os.path.normpath(archive_base)
 archive_main_js = os.path.join(archive_base, "resources/app/out/jetskiAgent/main.js")
 archive_product_json = os.path.join(archive_base, "resources/app/product.json")
@@ -179,7 +181,7 @@ for rel_path in target_files:
         print(
             "   The file may have been modified, is from a different version, or already patched."
         )
-        print("   Expected clean version: 1.104.1")
+        print(f"   Expected clean version: {VERSION}")
         print("   Proceeding to patch anyway, but results may be unpredictable.")
 
     # Backup Logic

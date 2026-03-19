@@ -13,6 +13,8 @@ if len(sys.argv) < 2:
 
 base_dir = sys.argv[1]
 
+VERSION = "1.107.0"
+
 # Detect layout for product.json
 possible_product_paths = [
     os.path.join(base_dir, "resources/app/product.json"),
@@ -42,7 +44,7 @@ if not file_path:
 target_suffix = "jetskiAgent/main.js"
 
 # Path to archive for reference
-archive_base = "archive/ag-1.104.1/src"
+archive_base = f"archive/ag-{VERSION}/src"
 archive_main_js = os.path.join(archive_base, "resources/app/out/jetskiAgent/main.js")
 archive_product_json = os.path.join(archive_base, "resources/app/product.json")
 

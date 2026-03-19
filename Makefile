@@ -11,6 +11,8 @@ _AG_SRC_MAC := /Applications/Antigravity.app/Contents
 _AG_CONF_LINUX := $(HOME)/.config
 _AG_CONF_MAC := $(HOME)/Library/Application Support
 
+AG_VERSION_EXPECTED := "1.107.0"
+
 
 # Logic - allow AG_SRC and AG_CONF override from environment
 ifndef AG_CONF
@@ -99,10 +101,10 @@ endif
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ifeq ($(_AG_CHECK_PRODUCT_JSON),1)
 	@echo "[OK] product.json found (Version: $(AG_VERSION))"
-	@if [ "$(AG_VERSION)" = "1.104.1" ]; then \
-		echo "   [OK] Version 1.104.1 exact match"; \
+	@if [ "$(AG_VERSION)" = "$(AG_VERSION_EXPECTED)" ]; then \
+		echo "   [OK] Version $(AG_VERSION_EXPECTED) exact match"; \
 	else \
-		echo "   [WARN] Unexpected version: \"$(AG_VERSION)\" (Expected: \"1.104.1\")"; \
+		echo "   [WARN] Unexpected version: \"$(AG_VERSION)\" (Expected: \"$(AG_VERSION_EXPECTED)\")"; \
 	fi
 ifeq ($(_AG_CHECK_PRODUCT_WRITABLE),1)
 	@echo "   [INFO] product.json is writable (No sudo needed)"
