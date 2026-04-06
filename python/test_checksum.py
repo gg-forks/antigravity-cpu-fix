@@ -25,9 +25,12 @@ def test_checksums():
     """Test that archive files match expected checksums."""
     print("=== Antigravity Checksum Verification Test ===\n")
 
+    with open("version.txt", "r") as f:
+        version = f.read().strip()
+
     # Test main.js
-    archive_main_js = "archive/ag-1.104.0/src/resources/app/out/jetskiAgent/main.js"
-    archive_product_json = "archive/ag-1.104.0/src/resources/app/product.json"
+    archive_main_js = f"archive/ag-{version}/src/resources/app/out/jetskiAgent/main.js"
+    archive_product_json = f"archive/ag-{version}/src/resources/app/product.json"
 
     if not os.path.exists(archive_main_js):
         print(f"❌ Archive main.js not found: {archive_main_js}")
