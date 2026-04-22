@@ -82,80 +82,109 @@ if (__fetch) globalThis.fetch = function(url, options) {
 """
 
 
-def get_file_hash(file_path, algo="sha256"):
-    """Calculate hash of a file."""
+def get_file_hash(file_path, algo="sha256", encoding="hex"):
+    """Calculate hash of a file with specified algorithm and encoding."""
     h = hashlib.new(algo)
     with open(file_path, "rb") as f:
         while chunk := f.read(8192):
             h.update(chunk)
-    return h.hexdigest()
+
+    if encoding == "base64":
+        return base64.b64encode(h.digest()).decode("utf-8")
+    elif encoding == "base64_unpadded":
+        return base64.b64encode(h.digest()).decode("utf-8").rstrip("=")
+    else:  # hex
+        return h.hexdigest()
 
 
-def verify_checksum(target_path, archive_path, product_json_path):
-    """Verify that target file matches archive checksum."""
-
-    # First check if archive file exists
-    if not os.path.exists(archive_path):
-        print(f"⚠️  Archive file not found: {archive_path}")
-        return False
-
-    # Get hash of archive file
-    archive_hash = get_file_hash(archive_path, "sha256")
-
-    # Get hash of target file
-    if not os.path.exists(target_path):
-        print(f"⚠️  Target file not found: {target_path}")
-        return False
-    target_hash = get_file_hash(target_path, "sha256")
-
-    # Compare hashes
-    if archive_hash == target_hash:
-        print(f"✓ Checksum verified: {os.path.basename(target_path)} matches archive")
-        return True
+def detect_hash_format(existing_hash):
+    """Detect the hash format from an existing checksum."""
+    if len(existing_hash) == 32:
+        return "md5", "hex"
+    elif len(existing_hash) == 64:
+        return "sha256", "hex"
+    elif len(existing_hash) == 44 and existing_hash.endswith("="):
+        return "sha256", "base64"
+    elif len(existing_hash) == 43:
+        return "sha256", "base64_unpadded"
     else:
-        print(f"❌ Checksum mismatch for {os.path.basename(target_path)}:")
-        print(f"  Archive: {archive_hash}")
-        print(f"  Target:  {target_hash}")
+        # Default to sha256 hex
+        return "sha256", "hex"
 
-        # Check product.json for expected checksum
-        if os.path.exists(product_json_path):
-            try:
-                with open(product_json_path, "r") as f:
-                    product_data = json.load(f)
 
-                checksums = product_data.get("checksums", {})
-                # Look for main.js checksum key
-                target_key = None
-                for key in checksums.keys():
-                    if key.endswith("jetskiAgent/main.js"):
-                        target_key = key
-                        break
+def verify_checksum(
+    target_path, archive_path, archive_product_json, system_product_json
+):
+    """Verify that target file matches archive or system checksum."""
 
-                if target_key:
-                    expected_checksum = checksums[target_key]
-                    print(f"  Expected (product.json): {expected_checksum}")
+    # 1. Direct comparison with archive file
+    if os.path.exists(archive_path):
+        archive_hash_hex = get_file_hash(archive_path, "sha256", "hex")
+        target_hash_hex = get_file_hash(target_path, "sha256", "hex")
 
-                    # Try to match format (could be base64 or hex)
-                    if len(expected_checksum) == 64:  # SHA256 hex
-                        if target_hash == expected_checksum:
-                            print("✓ Target matches product.json checksum")
-                            return True
-                    elif len(expected_checksum) == 44:  # SHA256 base64 with padding
-                        # Convert target hash to base64 for comparison
-                        target_b64 = base64.b64encode(
-                            bytes.fromhex(target_hash)
-                        ).decode()
-                        if target_b64 == expected_checksum:
-                            print("✓ Target matches product.json checksum (base64)")
-                            return True
-            except Exception as e:
-                print(f"⚠️  Could not read product.json: {e}")
+        if archive_hash_hex == target_hash_hex:
+            print(
+                f"✓ Checksum verified: {os.path.basename(target_path)} matches archive file"
+            )
+            return True
 
-        return False
+    # 2. Comparison with expected hashes in product.json files
+    target_hashes = {}  # algo: {encoding: hash}
+
+    for label, product_json in [
+        ("Archive", archive_product_json),
+        ("System", system_product_json),
+    ]:
+        if not os.path.exists(product_json):
+            continue
+
+        try:
+            with open(product_json, "r") as f:
+                product_data = json.load(f)
+
+            checksums = product_data.get("checksums", {})
+            target_key = None
+            for key in checksums.keys():
+                if key.endswith("jetskiAgent/main.js"):
+                    target_key = key
+                    break
+
+            if target_key:
+                expected_hash = checksums[target_key]
+                algo, encoding = detect_hash_format(expected_hash)
+
+                # Cache actual hash for target
+                cache_key = (algo, encoding)
+                if cache_key not in target_hashes:
+                    target_hashes[cache_key] = get_file_hash(
+                        target_path, algo, encoding
+                    )
+
+                if target_hashes[cache_key] == expected_hash:
+                    print(
+                        f"✓ Checksum verified: {os.path.basename(target_path)} matches {label} product.json ({encoding})"
+                    )
+                    return True
+                else:
+                    if label == "Archive":
+                        print(
+                            f"❌ Checksum mismatch for {os.path.basename(target_path)}:"
+                        )
+                        print(f"  Archive (expected): {expected_hash}")
+                        print(f"  Target  (actual):   {target_hashes[cache_key]}")
+        except Exception as e:
+            print(f"⚠️  Could not read {label} product.json: {e}")
+
+    return False
 
 
 for rel_path in target_files:
     file_path = os.path.join(ag_dir, rel_path)
+    # Detect system product.json path
+    system_product_json = os.path.join(ag_dir, "resources/app/product.json")
+    if not os.path.exists(system_product_json):
+        system_product_json = os.path.join(ag_dir, "product.json")
+
     # For archive, we always expect the standard structure or need to map it.
     # Since archive is fixed structure (resources/app...), we need to be careful.
     # If target is "out/...", archive is still "resources/app/out/...".
@@ -183,7 +212,9 @@ for rel_path in target_files:
 
     # Verify checksum before patching
     print(f"🔍 Verifying checksum for {rel_path}...")
-    checksum_ok = verify_checksum(file_path, archive_file_path, archive_product_json)
+    checksum_ok = verify_checksum(
+        file_path, archive_file_path, archive_product_json, system_product_json
+    )
     if not checksum_ok:
         print(f"⚠️  WARNING: {rel_path} does not match expected checksum")
         print(
@@ -199,6 +230,10 @@ for rel_path in target_files:
             shutil.copy2(file_path, backup_path)
             print(f"📦 Created backup: {rel_path}.bak")
         except Exception as e:
+            if isinstance(e, PermissionError):
+                print(f"❌ Permission Denied: Could not create backup for {rel_path}.")
+                print("   Please run with 'sudo'.")
+                sys.exit(1)
             print(f"❌ Error creating backup for {rel_path}: {e}")
             # Decide if we want to proceed or stop. Proceeding for now but warning.
 
@@ -213,4 +248,9 @@ for rel_path in target_files:
         print(f"✅ Patched: {rel_path}")
         print(f"  New Hash: {new_hash}")
     except Exception as e:
-        print(f"❌ Error writing {rel_path}: {e}")
+        if isinstance(e, PermissionError):
+            print(f"❌ Permission Denied: Could not write {rel_path}.")
+            print("   Please run with 'sudo'.")
+        else:
+            print(f"❌ Error writing {rel_path}: {e}")
+        sys.exit(1)

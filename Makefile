@@ -169,14 +169,22 @@ fetch_baseline: ##H@@	Fetch pristine files from official repo
 2_patch_code: ##H@@	Run code patcher (Auto-detected OS path)
 	@echo "Detected OS: $(OS)"
 	@echo "AG_SRC (Source): $(AG_SRC)"
-	# This usually requires sudo
+	@if [ ! -w "$(AG_FILE_01_MAIN_JS)" ]; then \
+		echo "❌ Error: $(AG_FILE_01_MAIN_JS) is not writable."; \
+		echo "   Please run with: sudo AG_SRC=$(AG_SRC) make 2_patch_code"; \
+		exit 1; \
+	fi
 	python3 python/patch_code.py "$(AG_SRC)"
 
 .PHONY: 3_update_integrity
 3_update_integrity: ##H@@	Update integrity manifest
 	@echo "Detected OS: $(OS)"
 	@echo "AG_SRC (Source): $(AG_SRC)"
-	# This usually requires sudo
+	@if [ ! -w "$(AG_FILE_02_PRODUCT_JSON)" ]; then \
+		echo "❌ Error: $(AG_FILE_02_PRODUCT_JSON) is not writable."; \
+		echo "   Please run with: sudo AG_SRC=$(AG_SRC) make 3_update_integrity"; \
+		exit 1; \
+	fi
 	python3 python/update_integrity.py "$(AG_SRC)"
 
 # TODO: do not automate this step, just output the commands that likely would with helpful comments
